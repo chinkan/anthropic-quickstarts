@@ -129,13 +129,26 @@ async def sampling_loop(
         # implementation may be able call the SDK directly with:
         # `response = client.messages.create(...)` instead.
         try:
-            raw_response = client.beta.messages.with_raw_response.create(
-                max_tokens=max_tokens,
-                messages=messages,
-                model=model,
-                system=[system],
-                tools=tool_collection.to_params(),
-                betas=betas,
+            headers = {
+                'Authorization': f'Bearer {os.getenv("OPENROUTER_API_KEY")}',
+                'HTTP-Referer': 'https://github.com/anthropics/anthropic-quickstarts',
+                'X-Title': 'Computer Use Demo',
+            }
+            
+            # 將每個beta旗標加入到headers
+            for beta in betas:
+                headers[f'anthropic-beta'] = beta
+
+            raw_response = await httpx.post(
+                'https://openrouter.ai/api/v1/chat/completions',
+                json={
+                    'max_tokens': max_tokens,
+                    'messages': messages,
+                    'model': 'anthropic/claude-3-sonnet-20240229',
+                    'system': system['text'],
+                    'tools': tool_collection.to_params(),
+                },
+                headers=headers
             )
         except (APIStatusError, APIResponseValidationError) as e:
             api_response_callback(e.request, e.response, e)
